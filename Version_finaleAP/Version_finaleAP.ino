@@ -3,7 +3,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <EEPROM.h>
-
+#include <ArduinoJson.h>
 
 #include <ESPAsyncWebServer.h>
 
@@ -28,28 +28,131 @@ AsyncWebServer server(80);
 
 const char* PARAM_MESSAGE = "message";
 
-const char HTML[] PROGMEM = "<!doctype html>"
-"<html lang=\"en\">"
-  "<head>"
-    "<meta charset=\"UTF-8\" />"
+const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
+"<html lang=\"en\">\n"
+"<head>\n"
+"    <meta charset=\"UTF-8\">\n"
+"    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+"    <title>Formulaire Wi-Fi</title>\n"
+"    <style>\n"
+"        body {\n"
+"            font-family: Arial, sans-serif;\n"
+"            margin: 0;\n"
+"            padding: 0;\n"
+"            box-sizing: border-box;\n"
+"        }\n"
+"\n"
+"        header {\n"
+"            background-color: #333;\n"
+"            color: #fff;\n"
+"            text-align: center;\n"
+"            padding: 10px;\n"
+"        }\n"
+"\n"
+"        section {\n"
+"            margin: 20px;\n"
+"        }\n"
+"\n"
+"        form {\n"
+"            display: grid;\n"
+"            gap: 10px;\n"
+"        }\n"
+"\n"
+"        label {\n"
+"            display: block;\n"
+"            margin-bottom: 5px;\n"
+"        }\n"
+"\n"
+"        input {\n"
+"            padding: 8px;\n"
+"        }\n"
+"\n"
+"        button {\n"
+"            padding: 10px;\n"
+"            background-color: #333;\n"
+"            color: #fff;\n"
+"            border: none;\n"
+"            cursor: pointer;\n"
+"        }\n"
+"    </style>\n"
+"</head>\n"
+"<body>\n"
+"\n"
+"    <header>\n"
+"        <h1>Configuration Wi-Fi</h1>\n"
+"    </header>\n"
+"\n"
+"    <section>\n"
+"        <h2>Wi-Fi</h2>\n"
+"        <form id=\"NetworkForm\">\n"
+"            <label for=\"ssid\">SSID:</label>\n"
+"            <input type=\"text\" id=\"ssid\" name=\"ssid\" required>\n"
+"\n"
+"            <label for=\"password\">Mot de passe:</label>\n"
+"            <input type=\"password\" id=\"password\" name=\"password\" required>\n"
+"\n"
+"\n"
+"        <h2>Réseau Secondaire</h2>\n"
+"\n"
+"            <label for=\"identifier\">Identifiant:</label>\n"
+"            <input type=\"text\" id=\"identifier\" name=\"identifier\" required>\n"
+"\n"
+"            <label for=\"secondaryPassword\">Mot de passe:</label>\n"
+"            <input type=\"password\" id=\"secondaryPassword\" name=\"secondaryPassword\" required>\n"
+"\n"
+"            <button type=\"button\" onclick=\"submitForm('NetworkForm')\">Valider</button>\n"
+"        </form>\n"
+"    </section>\n"
+"\n"
+"    <script>\n"
+"        function submitForm(formId) {\n"
+"            const form = document.getElementById(formId);\n"
+"            const formData = new FormData(form);\n"
+"            const jsonData = {};\n"
+"\n"
+"            formData.forEach((value, key) => {\n"
+"                jsonData[key] = value;\n"
+"            });\n"
+"\n"
+"            const url = 'http://192.168.4.1/config';\n"
+"            fetch(url, {\n"
+"                method: 'POST',\n"
+"                headers: {\n"
+"                    'Content-Type': 'application/json',\n"
+"                },\n"
+"                body: JSON.stringify(jsonData),\n"
+"            })\n"
+"            .then(response => response.text())\n"
+"            .then(data => {\n"
+"                console.log('Réponse de lAPI:', data);\n"
+"\n"
+"            })\n"
+"            .catch(error => {\n"
+"                console.error('Erreur lors de lenvoi des données:', error);\n"
+"\n"
+"            });\n"
+"        }\n"
+"    </script>\n"
+"\n"
+"</body>\n"
+"</html>\n"
+"\n"
 
-    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />"
-    "<title>Vite + React</title>"
-    "<script type=\"module\" crossorigin src=\"/plugin.js\"></script>"
-    "<link rel=\"stylesheet\" crossorigin href=\"/style.css\">"
-  "</head>"
-  "<body>"
-    "<div><h1>titre</h1></div>"
-    "<div id=\"root\"></div>"
-  "</body>"
-"</html>";
+;
  
-const char JS[] PROGMEM ="document.addEventListener(\"DOMContentLoaded\", function () { const editableInfos = {}; const handleInputChange = (e) => { const { name, value } = e.target; editableInfos[name] = value; }; async function postData(url = \"\", donnees = {}) { const response = await fetch(url, { method: \"POST\" , cache: \"no-cache\", credentials: \"same-origin\", headers: { \"Content-Type\": \"application/json\", }, redirect: \"follow\", referrerPolicy: \"no-referrer\", body: JSON.stringify(donnees), }); return response.json(); } const handleSubmit = (event) => { event.preventDefault(); const formData = { ssid: editableInfos.ssid, password: editableInfos.password, idesp: editableInfos.idesp, mdpesp: editableInfos.mdpesp, }; postData('http://192.168.4.1/config', formData) .then((response) => { console.log(response.data); }) .catch((error) => { console.error(\"Erreur lors de la soumission du formulaire :\", error); }); console.log(formData); }; const rootElement = document.getElementById(\"root\"); const container = document.createElement(\"div\"); container.className = \"container\"; rootElement.appendChild(container); const h1 = document.createElement(\"h1\"); h1.textContent = \"ESP32 IOT page de configuration\"; container.appendChild(h1); const form = document.createElement(\"form\"); form.addEventListener(\"submit\", handleSubmit); form.className = \"etudiant-changement\"; container.appendChild(form); const wifiConfig = document.createElement(\"div\"); wifiConfig.className = \"wifi-config\"; form.appendChild(wifiConfig); const wifiHeader = document.createElement(\"h2\"); wifiHeader.textContent = \"Reseaux WiFi\"; wifiConfig.appendChild(wifiHeader); const wifiLabels = [\"SSID\", \"mot de passe wifi\"]; wifiLabels.forEach((label) => { const inputLabel = document.createElement(\"label\"); inputLabel.htmlFor = label.toLowerCase().replace(/\\s/g, \"\"); inputLabel.textContent = label; wifiConfig.appendChild(inputLabel); const inputField = document.createElement(\"input\"); inputField.type = \"text\"; inputField.id = label.toLowerCase().replace(/\\s/g, \"\"); inputField.name = label.toLowerCase().replace(/\\s/g, \"\"); inputField.value = editableInfos[label.toLowerCase().replace(/\\s/g, \"\")] || \"\"; inputField.addEventListener(\"change\", handleInputChange); inputField.className = \"input-field\"; wifiConfig.appendChild(inputField); }); const espNowConfig = document.createElement(\"div\"); espNowConfig.className = \"espnow-config\"; form.appendChild(espNowConfig); const espNowHeader = document.createElement(\"h2\"); espNowHeader.textContent = \"Reseaux ESPNow\"; espNowConfig.appendChild(espNowHeader); const espNowLabels = [\"Identifiant ESP\", \"mot de passe ESP\"]; espNowLabels.forEach((label) => { const inputLabel = document.createElement(\"label\"); inputLabel.htmlFor = label.toLowerCase().replace(/\\s/g, \"\"); inputLabel.textContent = label; espNowConfig.appendChild(inputLabel); const inputField = document.createElement(\"input\"); inputField.type = \"text\"; inputField.id = label.toLowerCase().replace(/\\s/g, \"\"); inputField.name = label.toLowerCase().replace(/\\s/g, \"\"); inputField.value = editableInfos[label.toLowerCase().replace(/\\s/g, \"\")] || \"\"; inputField.addEventListener(\"change\", handleInputChange); inputField.className = \"input-field\"; espNowConfig.appendChild(inputField); }); const submitButton = document.createElement(\"input\"); submitButton.type = \"submit\"; submitButton.className = \"submit-button\"; form.appendChild(submitButton); });";
 
-const char CSS[] PROGMEM ="h1{background-color:red}";
+
+// const char JS[] PROGMEM ="document.addEventListener(\"DOMContentLoaded\", function () {"
+// "const editableInfos = {};";
+
+
+// const char CSS[] PROGMEM ="h1{"
+// "background-color:red"
+// "}";
 
 char *ssid = "axel";
 char *password = "12345678";
+
 
 
 
@@ -60,7 +163,89 @@ void setup() {
   // Serial.println("Approchez une carte RFID...");
 
 
-if (wifidispo){
+
+WiFi.softAP("ESP");
+
+
+
+Serial.println(WiFi.localIP());
+
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+     Serial.println("html demande");
+    request->send(200, "text/html", HTML);
+  });
+  
+
+
+  // server.on("/plugin.js", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   Serial.println("js demande");
+  //   request->send(200, "text/javascript", JS);
+  // });
+
+
+
+  //     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
+  //   Serial.println("reception de donne");
+  //   String message;
+  //       if (request->hasParam(PARAM_MESSAGE, true)) {
+  //           message = request->getParam(PARAM_MESSAGE, true)->value();
+  //       } else {
+  //           message = "No message sent";
+  //       }
+  //       Serial.println(message);
+  //   request->send(200, "text/plain", message);
+  // });
+server.on(
+    "/config",
+    HTTP_POST,
+    [](AsyncWebServerRequest * request){
+      // Rien à faire ici pour le moment
+    },
+    NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+      
+      // Définir la taille maximale des tableaux de caractères
+      const size_t maxStringLength = 50;
+
+      // Déclarer des tableaux de caractères pour stocker les valeurs
+      char ssid[maxStringLength];
+      char password[maxStringLength];
+      char identifier[maxStringLength];
+      char secondaryPassword[maxStringLength];
+
+      // Convertir les données de la requête en une chaîne de caractères
+      String requestData = "";
+      for (size_t i = 0; i < len; i++) {
+        requestData += (char)data[i];
+      }
+
+      // Utiliser la bibliothèque ArduinoJson pour extraire les valeurs
+      DynamicJsonDocument doc(1024);  // Taille du document JSON, ajustez si nécessaire
+      deserializeJson(doc, requestData);
+
+      // Extraire les valeurs des champs JSON
+      strncpy(ssid, doc["ssid"] | "", maxStringLength);
+      strncpy(password, doc["password"] | "", maxStringLength);
+      strncpy(identifier, doc["identifier"] | "", maxStringLength);
+      strncpy(secondaryPassword, doc["secondaryPassword"] | "", maxStringLength);
+
+      // Afficher les valeurs dans la console
+      Serial.print("SSID: "); Serial.println(ssid);
+      Serial.print("Password: "); Serial.println(password);
+      Serial.print("Identifier: "); Serial.println(identifier);
+      Serial.print("Secondary Password: "); Serial.println(secondaryPassword);
+
+
+
+
+
+
+
+      // Envoyer une réponse au client
+      request->send(200, "text/plain", requestData);
+
+
 
 WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
         // Initialise la communication SPI
@@ -79,61 +264,31 @@ SPI.begin();
   }
 
 
-}
-else{
-WiFi.softAP("ESP");
 
 
-
-Serial.println(WiFi.localIP());
-
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-     Serial.println("html demande");
-    request->send(200, "text/html", HTML);
-  });
-  
-  // Route to load style.css file
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("css demande");
-    request->send(200, "text/css", CSS);
-  });
-
-  server.on("/plugin.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("js demande");
-    request->send(200, "text/javascript", JS);
   });
 
 
 
-      server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
-    Serial.println("reception de donne");
-    String message;
-        if (request->hasParam(PARAM_MESSAGE, true)) {
-            message = request->getParam(PARAM_MESSAGE, true)->value();
-        } else {
-            message = "No message sent";
-        }
-        Serial.println(message);
-    request->send(200, "text/plain", "Hello, POST: " + message);
-  });
+
+
 
   // Start server
   server.begin();
 
 }
-}
+
 
 void loop() {
 
 
-  if (wifidispo){
+
 
     
 
     if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
       Serial.println("tentative de lecture de carte");
-    delay(250);
+    delay(10000);
     return;
   }
   // Affiche le numéro de série de la carte
@@ -182,11 +337,7 @@ void loop() {
 
 
 
-  }
-  else{
-  Serial.print("en train de fair serveur\n");
-  delay(5000);
-  }
+
     
 // // WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
 // //   SPI.begin();         // Initialise la communication SPI
