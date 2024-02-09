@@ -4,7 +4,7 @@
 #include <HTTPClient.h>
 #include <EEPROM.h>
 #include <ArduinoJson.h>
-#include <EEPROM.h>
+
 
 #include <ESPAsyncWebServer.h>
 
@@ -213,7 +213,7 @@ void vTask1( void *pvParameters ) // Déclaration de la tâche 1
 
 
     
-    vTaskDelay( pdMS_TO_TICKS( 5000 ) );
+    vTaskDelay( pdMS_TO_TICKS( 10000 ) );
   }
 }
 
@@ -236,9 +236,9 @@ void vTask2( void *pvParameters )
 
     digitalWrite(output26, LOW);
 digitalWrite(output13, LOW);
-    vTaskDelay( pdMS_TO_TICKS( 1000 ) );
+    vTaskDelay( pdMS_TO_TICKS( 3000 ) );
   }
-  vTaskDelay( pdMS_TO_TICKS( 1000 ) );
+  vTaskDelay( pdMS_TO_TICKS( 3000 ) );
  }
 }
 
@@ -255,30 +255,34 @@ void setup() {
 
 
 WiFi.softAP("ESP");
-if (has_credentials()) {
-char ssidrecup[32], passwordrecup[32];
-    load_credentials(ssidrecup, passwordrecup);
-Serial.println("identifant retrouvé"+String(ssidrecup));
+Serial.println(WiFi.localIP()+"adresse ipsur le point d'accés");
 
-WiFi.begin(ssidrecup, passwordrecup); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
+
+if (has_credentials()) {
+  char ssidrecup[32], passwordrecup[32];
+    load_credentials(ssidrecup, passwordrecup);
+  Serial.println("identifant retrouvé"+String(ssidrecup));
+
+  WiFi.begin(ssidrecup, passwordrecup); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
         // Initialise la communication SPI
    mfrc522.PCD_Init();  // Initialise le module RC522
-SPI.begin();  
+  SPI.begin();  
 
 
     while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
     delay(1000);
-    Serial.println("Connexion au WiFi...");
+    Serial.println("Connexion au WiFi... via ce qui est enregistré");
   }
   if (WiFi.status() == WL_CONNECTED)
   { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
     
-    Serial.println("Connecte au wifi");
+    Serial.println("Connecte au wifi grace a ce qui a été enregistré");
+    Serial.println(WiFi.localIP()+"adresse ip grace a ce qui a été enregistré");
   }
 
 }
 
-Serial.println(WiFi.localIP());
+
 
 
 
@@ -367,8 +371,9 @@ save_credentials(ssid, password);
 Serial.print("enregistré");
 WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
         // Initialise la communication SPI
+        SPI.begin();  
+
    mfrc522.PCD_Init();  // Initialise le module RC522
-SPI.begin();  
 
 
     while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
