@@ -14,8 +14,9 @@
 #define EEPROM_SIZE 64
 const int output26 = 26;
 const int output13 = 13;
+const int output12 = 12;
 
-int inter = 36; //Initialisation de notre interrupteur à la patte 36
+int inter = 32; //Initialisation de notre interrupteur à la patte 36
 
 
 // String ssid;
@@ -229,16 +230,16 @@ void vTask2( void *pvParameters )
     Serial.println("- GPIO36 actif - ");
     //vTaskDelete( xTask2Handle );
     erase_credentials();
-    Serial.println("éffacé");
+    Serial.println("effacé");
     digitalWrite(output26, HIGH);
-    digitalWrite(output13, HIGH);
+
     delay(250);
 
     digitalWrite(output26, LOW);
-digitalWrite(output13, LOW);
-    vTaskDelay( pdMS_TO_TICKS( 3000 ) );
+
+    vTaskDelay( pdMS_TO_TICKS( 250 ) );
   }
-  vTaskDelay( pdMS_TO_TICKS( 3000 ) );
+  vTaskDelay( pdMS_TO_TICKS( 250 ) );
  }
 }
 
@@ -251,7 +252,8 @@ void setup() {
   // Serial.println("Approchez une carte RFID...");
   pinMode(output26, OUTPUT);
   pinMode(output13, OUTPUT);
-  pinMode(inter,INPUT);
+  pinMode(output12, OUTPUT);
+  pinMode(inter,INPUT_PULLDOWN);
 
 
 WiFi.softAP("ESP");
@@ -375,10 +377,13 @@ WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le 
 
    mfrc522.PCD_Init();  // Initialise le module RC522
 
+    
 
     while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
+    digitalWrite(output13, HIGH);
     delay(1000);
     Serial.println("Connexion au WiFi...");
+        digitalWrite(output13, LOW);
   }
   if (WiFi.status() == WL_CONNECTED)
   { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
@@ -416,11 +421,12 @@ void loop() {
 
     if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
       Serial.println("tentative de lecture de carte");
-    delay(10000);
+    delay(5000);
     return;
   }
   // Affiche le numéro de série de la carte
   Serial.print("Carte détectée avec le numéro de série : ");
+  digitalWrite(  output12, HIGH);
   String content = "";
   for (byte i = 0; i < mfrc522.uid.size; i++) { // Boucle qui pour chaque octet lu sur la carte le convertit hexadecimale et l'ajoute a la suite de content
 
@@ -458,6 +464,7 @@ void loop() {
 
     // Libérer les ressources de la requête
     http.end();
+    digitalWrite(  output12, LOW);
   }
   // Attendez quelques instants pour éviter une lecture continue
   delay(2000);
