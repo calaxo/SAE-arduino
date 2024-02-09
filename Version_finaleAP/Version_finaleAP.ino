@@ -4,13 +4,18 @@
 #include <HTTPClient.h>
 #include <EEPROM.h>
 #include <ArduinoJson.h>
+#include <EEPROM.h>
 
 #include <ESPAsyncWebServer.h>
 
 
 #define SS_PIN 5
 #define RST_PIN 27
+#define EEPROM_SIZE 64
+const int output26 = 26;
+const int output13 = 13;
 
+int inter = 36; //Initialisation de notre interrupteur à la patte 36
 
 
 // String ssid;
@@ -150,25 +155,137 @@ const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
 // "background-color:red"
 // "}";
 
-char *ssid = "axel";
-char *password = "12345678";
+
+bool has_credentials() {
+  return EEPROM.read(0) == 0x42 /* credentials marker */;
+}
+
+void save_credentials(char *ssid, char *pass) {
+  char buf[EEPROM_SIZE];
+  sprintf(buf, "%c%s:%s", 0x42, ssid, pass);
+  EEPROM.writeString(0, buf);
+  EEPROM.commit();
+}
+
+void load_credentials(char *ssid, char *pass) {
+  if (!has_credentials()) {
+    return;
+  }
+  char buf[EEPROM_SIZE];
+  EEPROM.readString(1, buf, EEPROM_SIZE - 1);
+  int i = 0;
+  while ( i < EEPROM_SIZE && *(buf + i) != ':') {
+    *ssid = *(buf + i);
+    ssid++;
+    i++;
+  }
+  *ssid = '\0';
+  if (i == EEPROM_SIZE) {
+    return;
+  }
+  i++;
+
+  while ( i < EEPROM_SIZE && *(buf + i) != '\0') {
+    *pass = *(buf + i);
+    pass++;
+    i++;
+  }
+  *pass = '\0';
+}
+
+void erase_credentials() {
+  EEPROM.write(0, 0);
+  EEPROM.commit();
+}
 
 
+
+
+void vTask1( void *pvParameters ) // Déclaration de la tâche 1
+{
+  for( ;; ) // 
+  {
+    Serial.printf("vTask1 %d\n", xPortGetCoreID());
+  Serial.printf("c'est la premiere tache 1", xPortGetCoreID());
+    
+
+
+
+
+    
+    vTaskDelay( pdMS_TO_TICKS( 5000 ) );
+  }
+}
+
+
+
+void vTask2( void *pvParameters )
+{
+  for( ;; )
+  {
+
+    
+    if (digitalRead(inter) == HIGH){
+    Serial.println("- GPIO36 actif - ");
+    //vTaskDelete( xTask2Handle );
+    erase_credentials();
+    Serial.println("éffacé");
+    digitalWrite(output26, HIGH);
+    digitalWrite(output13, HIGH);
+    delay(250);
+
+    digitalWrite(output26, LOW);
+digitalWrite(output13, LOW);
+    vTaskDelay( pdMS_TO_TICKS( 1000 ) );
+  }
+  vTaskDelay( pdMS_TO_TICKS( 1000 ) );
+ }
+}
 
 
 void setup() {
+  EEPROM.begin(EEPROM_SIZE);
   Serial.begin(115200);  // Initialise la communication série
  
   // Serial.println("Connecté au WiFi");
   // Serial.println("Approchez une carte RFID...");
-
+  pinMode(output26, OUTPUT);
+  pinMode(output13, OUTPUT);
+  pinMode(inter,INPUT);
 
 
 WiFi.softAP("ESP");
+if (has_credentials()) {
+char ssidrecup[32], passwordrecup[32];
+    load_credentials(ssidrecup, passwordrecup);
+Serial.println("identifant retrouvé"+String(ssidrecup));
+
+WiFi.begin(ssidrecup, passwordrecup); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
+        // Initialise la communication SPI
+   mfrc522.PCD_Init();  // Initialise le module RC522
+SPI.begin();  
 
 
+    while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
+    delay(1000);
+    Serial.println("Connexion au WiFi...");
+  }
+  if (WiFi.status() == WL_CONNECTED)
+  { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
+    
+    Serial.println("Connecte au wifi");
+  }
+
+}
 
 Serial.println(WiFi.localIP());
+
+
+
+
+
+
+
 
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -246,7 +363,8 @@ server.on(
       request->send(200, "text/plain", requestData);
 
 
-
+save_credentials(ssid, password);
+Serial.print("enregistré");
 WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
         // Initialise la communication SPI
    mfrc522.PCD_Init();  // Initialise le module RC522
@@ -275,6 +393,11 @@ SPI.begin();
 
   // Start server
   server.begin();
+
+  xTaskCreate(vTask1, "vTask1", 5000, NULL, 2, NULL);
+  //xTaskCreate(vTask2, "vTask2", 10000, NULL, 2, &xTask2Handle);
+  xTaskCreate(vTask2, "vTask2", 10000, NULL, 1, NULL);
+
 
 }
 
