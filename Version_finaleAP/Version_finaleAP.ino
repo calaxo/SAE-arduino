@@ -4,10 +4,7 @@
 #include <HTTPClient.h>
 #include <EEPROM.h>
 #include <ArduinoJson.h>
-
-
 #include <ESPAsyncWebServer.h>
-
 
 #define SS_PIN 5
 #define RST_PIN 27
@@ -15,24 +12,12 @@
 const int output26 = 26;
 const int output13 = 13;
 const int output12 = 12;
+int inter = 32;
 
-int inter = 32; //Initialisation de notre interrupteur à la patte 36
-
-
-// String ssid;
-// String pass;
-// String ip;
-// String gateway;
-
-
-char *apiEndpoint = "http://saegeii.axel-cal.fr/api/post";  // url api serveur
-
-MFRC522 mfrc522(SS_PIN, RST_PIN);  // Créer l'objet MFRC522
-
+char *apiEndpoint = "http://saegeii.axel-cal.fr/api/post";  
+MFRC522 mfrc522(SS_PIN, RST_PIN);
 bool wifidispo = false;
 AsyncWebServer server(80);
-
-const char* PARAM_MESSAGE = "message";
 
 const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
 "<html lang=\"en\">\n"
@@ -147,18 +132,8 @@ const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
 ;
  
 
-
-// const char JS[] PROGMEM ="document.addEventListener(\"DOMContentLoaded\", function () {"
-// "const editableInfos = {};";
-
-
-// const char CSS[] PROGMEM ="h1{"
-// "background-color:red"
-// "}";
-
-
 bool has_credentials() {
-  return EEPROM.read(0) == 0x42 /* credentials marker */;
+  return EEPROM.read(0) == 0x42;
 }
 
 void save_credentials(char *ssid, char *pass) {
@@ -199,44 +174,27 @@ void erase_credentials() {
   EEPROM.commit();
 }
 
-
-
-
-void vTask1( void *pvParameters ) // Déclaration de la tâche 1
+void vTask1( void *pvParameters )
 {
-  for( ;; ) // 
+  for( ;; )
   {
     Serial.printf("vTask1 %d\n", xPortGetCoreID());
   Serial.printf("c'est la premiere tache 1", xPortGetCoreID());
-    
-
-
-
-
-    
     vTaskDelay( pdMS_TO_TICKS( 10000 ) );
   }
 }
-
-
 
 void vTask2( void *pvParameters )
 {
   for( ;; )
   {
-
-    
     if (digitalRead(inter) == HIGH){
     Serial.println("- GPIO36 actif - ");
-    //vTaskDelete( xTask2Handle );
     erase_credentials();
     Serial.println("effacé");
     digitalWrite(output26, HIGH);
-
     delay(250);
-
     digitalWrite(output26, LOW);
-
     vTaskDelay( pdMS_TO_TICKS( 250 ) );
   }
   vTaskDelay( pdMS_TO_TICKS( 250 ) );
@@ -246,212 +204,110 @@ void vTask2( void *pvParameters )
 
 void setup() {
   EEPROM.begin(EEPROM_SIZE);
-  Serial.begin(115200);  // Initialise la communication série
- 
-  // Serial.println("Connecté au WiFi");
-  // Serial.println("Approchez une carte RFID...");
+  Serial.begin(115200);
   pinMode(output26, OUTPUT);
   pinMode(output13, OUTPUT);
   pinMode(output12, OUTPUT);
   pinMode(inter,INPUT_PULLDOWN);
 
-
 WiFi.softAP("ESP");
 Serial.println(WiFi.localIP()+"adresse ipsur le point d'accés");
+// has_credentials()
+if (3>2) {
+  // char ssidrecup[32], passwordrecup[32];
+  //   load_credentials(ssidrecup, passwordrecup);
+  // Serial.println("identifant retrouvé"+String(ssidrecup));
+  WiFi.begin("geii", "12345678");
+    SPI.begin();  
+   mfrc522.PCD_Init();
 
-
-if (has_credentials()) {
-  char ssidrecup[32], passwordrecup[32];
-    load_credentials(ssidrecup, passwordrecup);
-  Serial.println("identifant retrouvé"+String(ssidrecup));
-
-  WiFi.begin(ssidrecup, passwordrecup); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
-        // Initialise la communication SPI
-   mfrc522.PCD_Init();  // Initialise le module RC522
-  SPI.begin();  
-
-
-    while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
+    while (WiFi.status() != WL_CONNECTED) { 
     delay(1000);
     Serial.println("Connexion au WiFi... via ce qui est enregistré");
   }
   if (WiFi.status() == WL_CONNECTED)
-  { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
-    
+  { 
     Serial.println("Connecte au wifi grace a ce qui a été enregistré");
     Serial.println(WiFi.localIP()+"adresse ip grace a ce qui a été enregistré");
   }
-
 }
-
-
-
-
-
-
-
-
-
-
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
      Serial.println("html demande");
     request->send(200, "text/html", HTML);
   });
   
-
-
-  // server.on("/plugin.js", HTTP_GET, [](AsyncWebServerRequest *request){
-  //   Serial.println("js demande");
-  //   request->send(200, "text/javascript", JS);
-  // });
-
-
-
-  //     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
-  //   Serial.println("reception de donne");
-  //   String message;
-  //       if (request->hasParam(PARAM_MESSAGE, true)) {
-  //           message = request->getParam(PARAM_MESSAGE, true)->value();
-  //       } else {
-  //           message = "No message sent";
-  //       }
-  //       Serial.println(message);
-  //   request->send(200, "text/plain", message);
-  // });
 server.on(
     "/config",
     HTTP_POST,
     [](AsyncWebServerRequest * request){
-      // Rien à faire ici pour le moment
     },
     NULL,
     [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-      
-      // Définir la taille maximale des tableaux de caractères
       const size_t maxStringLength = 50;
-
-      // Déclarer des tableaux de caractères pour stocker les valeurs
       char ssid[maxStringLength];
       char password[maxStringLength];
       char identifier[maxStringLength];
       char secondaryPassword[maxStringLength];
-
-      // Convertir les données de la requête en une chaîne de caractères
       String requestData = "";
       for (size_t i = 0; i < len; i++) {
         requestData += (char)data[i];
       }
-
-      // Utiliser la bibliothèque ArduinoJson pour extraire les valeurs
-      DynamicJsonDocument doc(1024);  // Taille du document JSON, ajustez si nécessaire
+      DynamicJsonDocument doc(1024);
       deserializeJson(doc, requestData);
-
-      // Extraire les valeurs des champs JSON
       strncpy(ssid, doc["ssid"] | "", maxStringLength);
       strncpy(password, doc["password"] | "", maxStringLength);
       strncpy(identifier, doc["identifier"] | "", maxStringLength);
       strncpy(secondaryPassword, doc["secondaryPassword"] | "", maxStringLength);
-
-      // Afficher les valeurs dans la console
       Serial.print("SSID: "); Serial.println(ssid);
       Serial.print("Password: "); Serial.println(password);
       Serial.print("Identifier: "); Serial.println(identifier);
       Serial.print("Secondary Password: "); Serial.println(secondaryPassword);
-
-
-
-
-
-
-
-      // Envoyer une réponse au client
       request->send(200, "text/plain", requestData);
-
 
 save_credentials(ssid, password);
 Serial.print("enregistré");
-WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
-        // Initialise la communication SPI
+WiFi.begin(ssid, password);
         SPI.begin();  
-
-   mfrc522.PCD_Init();  // Initialise le module RC522
-
-    
-
-    while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
+   mfrc522.PCD_Init();
+    while (WiFi.status() != WL_CONNECTED) {
     digitalWrite(output13, HIGH);
     delay(1000);
     Serial.println("Connexion au WiFi...");
         digitalWrite(output13, LOW);
   }
   if (WiFi.status() == WL_CONNECTED)
-  { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
-    
+  {
     Serial.println("Connecte au wifi");
   }
-
-
-
-
   });
-
-
-
-
-
-
-  // Start server
   server.begin();
-
   xTaskCreate(vTask1, "vTask1", 5000, NULL, 2, NULL);
-  //xTaskCreate(vTask2, "vTask2", 10000, NULL, 2, &xTask2Handle);
   xTaskCreate(vTask2, "vTask2", 10000, NULL, 1, NULL);
-
-
 }
 
-
 void loop() {
-
-
-
-
-    
 
     if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
       Serial.println("tentative de lecture de carte");
     delay(5000);
     return;
   }
-  // Affiche le numéro de série de la carte
   Serial.print("Carte détectée avec le numéro de série : ");
   digitalWrite(  output12, HIGH);
   String content = "";
-  for (byte i = 0; i < mfrc522.uid.size; i++) { // Boucle qui pour chaque octet lu sur la carte le convertit hexadecimale et l'ajoute a la suite de content
-
-    if (mfrc522.uid.uidByte[i] < 0x10) { // Lors de la conversion en hexadecimale, les zeros a gauche disparaissent. On rajoute un 0 lorsque le nombre a convertir est inferieur a 0x10
-      content.concat(String("0"));
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    if (mfrc522.uid.uidByte[i] < 0x10) {  content.concat(String("0"));
     }
-
-    content.concat(String(mfrc522.uid.uidByte[i], HEX)); // On convertit l'octet en hexadecimale
+    content.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
 
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-
-    // Définir l'URL de l'API
     http.begin(apiEndpoint);
-
-    // Définir les en-têtes de la requête
     http.addHeader("Content-Type", "application/json");
-    // Créer le contenu JSON à envoyer
     String jsonPayload = "{\"fkidEtudiant\":\"" + content + "\"}";
-
-    // Effectuer la requête HTTP POST
     int httpResponseCode = http.POST(jsonPayload);
-
-    // Vérifier la réponse de l'API
     if (httpResponseCode > 0) {
       Serial.print("HTTP Response code: ");
       Serial.println(httpResponseCode);
@@ -461,32 +317,8 @@ void loop() {
       Serial.print("HTTP Request failed. Error code: ");
       Serial.println(httpResponseCode);
     }
-
-    // Libérer les ressources de la requête
     http.end();
     digitalWrite(  output12, LOW);
   }
-  // Attendez quelques instants pour éviter une lecture continue
   delay(2000);
-
-
-
-
-
-    
-// // WiFi.begin(ssid, password); // Essaye de se connecter au point d'accès avec le ssid et le mot de passe renseignés
-// //   SPI.begin();         // Initialise la communication SPI
-// //   mfrc522.PCD_Init();  // Initialise le module RC522
-// //   while (WiFi.status() != WL_CONNECTED) { //Affiche toute les secondes "Connexion au WiFi..." tant que l'ESP32 n'y est pas connecté
-// //     delay(1000);
-// //     Serial.println("Connexion au WiFi...");
-// //   }
-
-
-
-//   }
-
-  // Recherche des cartes RFID
-  
-
 }
