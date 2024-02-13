@@ -6,9 +6,6 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 
-
-
-
 #define SS_PIN 5
 #define RST_PIN 27
 #define EEPROM_SIZE 64
