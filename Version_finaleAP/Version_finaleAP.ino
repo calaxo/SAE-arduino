@@ -6,6 +6,9 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 
+
+
+
 #define SS_PIN 5
 #define RST_PIN 27
 #define EEPROM_SIZE 64
@@ -209,15 +212,16 @@ void setup() {
   pinMode(output13, OUTPUT);
   pinMode(output12, OUTPUT);
   pinMode(inter,INPUT_PULLDOWN);
-
+  xTaskCreate(vTask1, "vTask1", 5000, NULL, 2, NULL);
+  xTaskCreate(vTask2, "vTask2", 10000, NULL, 1, NULL);
 WiFi.softAP("ESP");
 Serial.println(WiFi.localIP()+"adresse ipsur le point d'accés");
-// has_credentials()
-if (3>2) {
-  // char ssidrecup[32], passwordrecup[32];
-  //   load_credentials(ssidrecup, passwordrecup);
-  // Serial.println("identifant retrouvé"+String(ssidrecup));
-  WiFi.begin("geii", "12345678");
+// 
+if (has_credentials()) {
+  char ssidrecup[32], passwordrecup[32];
+    load_credentials(ssidrecup, passwordrecup);
+  Serial.println("identifant retrouvé"+String(ssidrecup));
+  WiFi.begin(ssidrecup, passwordrecup);
     SPI.begin();  
    mfrc522.PCD_Init();
 
@@ -282,8 +286,7 @@ WiFi.begin(ssid, password);
   }
   });
   server.begin();
-  xTaskCreate(vTask1, "vTask1", 5000, NULL, 2, NULL);
-  xTaskCreate(vTask2, "vTask2", 10000, NULL, 1, NULL);
+
 }
 
 void loop() {
