@@ -5,6 +5,8 @@
 #include <EEPROM.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
+#include <esp_now.h>
+
 
 #define SS_PIN 5
 #define RST_PIN 27
@@ -14,122 +16,151 @@ const int output13 = 13;
 const int output12 = 12;
 int inter = 32;
 
+typedef struct struct_message {
+  int id;
+  char donnee[32];
+} struct_message;
+
+struct_message incomingMessage;
+
+
+void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) { 
+  // Copies the sender mac address to a string
+  char macStr[18];
+  Serial.print("Packet received from: ");
+  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  Serial.println(macStr);
+  memcpy(&incomingMessage, incomingData, sizeof(incomingMessage));
+  
+
+Serial.println(WiFi.channel());
+  Serial.printf("le message recu est \n", incomingData);
+  Serial.printf("sa vient de :\n", incomingMessage.id, len);
+  Serial.printf("la donnée est: \n", incomingMessage.donnee);
+
+  Serial.println();
+}
+
+
 char *apiEndpoint = "http://saegeii.axel-cal.fr/api/post";  
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 bool wifidispo = false;
 AsyncWebServer server(80);
 
-const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
-"<html lang=\"en\">\n"
-"<head>\n"
-"    <meta charset=\"UTF-8\">\n"
-"    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-"    <title>Formulaire Wi-Fi</title>\n"
-"    <style>\n"
-"        body {\n"
-"            font-family: Arial, sans-serif;\n"
-"            margin: 0;\n"
-"            padding: 0;\n"
-"            box-sizing: border-box;\n"
-"        }\n"
-"\n"
-"        header {\n"
-"            background-color: #333;\n"
-"            color: #fff;\n"
-"            text-align: center;\n"
-"            padding: 10px;\n"
-"        }\n"
-"\n"
-"        section {\n"
-"            margin: 20px;\n"
-"        }\n"
-"\n"
-"        form {\n"
-"            display: grid;\n"
-"            gap: 10px;\n"
-"        }\n"
-"\n"
-"        label {\n"
-"            display: block;\n"
-"            margin-bottom: 5px;\n"
-"        }\n"
-"\n"
-"        input {\n"
-"            padding: 8px;\n"
-"        }\n"
-"\n"
-"        button {\n"
-"            padding: 10px;\n"
-"            background-color: #333;\n"
-"            color: #fff;\n"
-"            border: none;\n"
-"            cursor: pointer;\n"
-"        }\n"
-"    </style>\n"
-"</head>\n"
-"<body>\n"
-"\n"
-"    <header>\n"
-"        <h1>Configuration Wi-Fi</h1>\n"
-"    </header>\n"
-"\n"
-"    <section>\n"
-"        <h2>Wi-Fi</h2>\n"
-"        <form id=\"NetworkForm\">\n"
-"            <label for=\"ssid\">SSID:</label>\n"
-"            <input type=\"text\" id=\"ssid\" name=\"ssid\" required>\n"
-"\n"
-"            <label for=\"password\">Mot de passe:</label>\n"
-"            <input type=\"password\" id=\"password\" name=\"password\" required>\n"
-"\n"
-"\n"
-"        <h2>Réseau Secondaire</h2>\n"
-"\n"
-"            <label for=\"identifier\">Identifiant:</label>\n"
-"            <input type=\"text\" id=\"identifier\" name=\"identifier\" required>\n"
-"\n"
-"            <label for=\"secondaryPassword\">Mot de passe:</label>\n"
-"            <input type=\"password\" id=\"secondaryPassword\" name=\"secondaryPassword\" required>\n"
-"\n"
-"            <button type=\"button\" onclick=\"submitForm('NetworkForm')\">Valider</button>\n"
-"        </form>\n"
-"    </section>\n"
-"\n"
-"    <script>\n"
-"        function submitForm(formId) {\n"
-"            const form = document.getElementById(formId);\n"
-"            const formData = new FormData(form);\n"
-"            const jsonData = {};\n"
-"\n"
-"            formData.forEach((value, key) => {\n"
-"                jsonData[key] = value;\n"
-"            });\n"
-"\n"
-"            const url = 'http://192.168.4.1/config';\n"
-"            fetch(url, {\n"
-"                method: 'POST',\n"
-"                headers: {\n"
-"                    'Content-Type': 'application/json',\n"
-"                },\n"
-"                body: JSON.stringify(jsonData),\n"
-"            })\n"
-"            .then(response => response.text())\n"
-"            .then(data => {\n"
-"                console.log('Réponse de lAPI:', data);\n"
-"\n"
-"            })\n"
-"            .catch(error => {\n"
-"                console.error('Erreur lors de lenvoi des données:', error);\n"
-"\n"
-"            });\n"
-"        }\n"
-"    </script>\n"
-"\n"
-"</body>\n"
-"</html>\n"
-"\n"
+const char HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulaire Wi-Fi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-;
+        header {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+        }
+
+        section {
+            margin: 20px;
+        }
+
+        form {
+            display: grid;
+            gap: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input {
+            padding: 8px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Configuration Wi-Fi</h1>
+    </header>
+
+    <section>
+        <h2>Wi-Fi</h2>
+        <form id="NetworkForm">
+            <label for="ssid">SSID:</label>
+            <input type="text" id="ssid" name="ssid" required>
+
+            <label for="password">Mot de passe:</label>
+            <input type="password" id="password" name="password" required>
+
+
+        <h2>Réseau Secondaire</h2>
+      
+            <label for="identifier">Identifiant:</label>
+            <input type="text" id="identifier" name="identifier" required>
+
+            <label for="secondaryPassword">Mot de passe:</label>
+            <input type="password" id="secondaryPassword" name="secondaryPassword" required>
+
+            <button type="button" onclick="submitForm('NetworkForm')">Valider</button>
+        </form>
+    </section>
+
+    <script>
+        function submitForm(formId) {
+            const form = document.getElementById(formId);
+            const formData = new FormData(form);
+            const jsonData = {};
+
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
+            });
+
+            const url = 'http://192.168.4.1/config';
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jsonData),
+            })
+            .then(response => response.text())
+            .then(data => {
+                console.log('Réponse de lAPI:', data);
+
+            })
+            .catch(error => {
+                console.error('Erreur lors de lenvoi des données:', error);
+
+            });
+        }
+    </script>
+
+</body>
+</html>
+
+
+
+)rawliteral";
  
 
 bool has_credentials() {
@@ -209,11 +240,21 @@ void setup() {
   pinMode(output13, OUTPUT);
   pinMode(output12, OUTPUT);
   pinMode(inter,INPUT_PULLDOWN);
+  WiFi.mode(WIFI_AP_STA);
   xTaskCreate(vTask1, "vTask1", 5000, NULL, 2, NULL);
   xTaskCreate(vTask2, "vTask2", 10000, NULL, 1, NULL);
+
 WiFi.softAP("ESP");
 Serial.println(WiFi.localIP()+"adresse ipsur le point d'accés");
 // 
+
+ if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+
+
+
 if (has_credentials()) {
   char ssidrecup[32], passwordrecup[32];
     load_credentials(ssidrecup, passwordrecup);
@@ -282,6 +323,17 @@ WiFi.begin(ssid, password);
     Serial.println("Connecte au wifi");
   }
   });
+
+//  events.onConnect([](AsyncEventSourceClient *client){
+//     if(client->lastId()){
+//       Serial.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
+//     }
+//     // send event with message "hello!", id current millis
+//     // and set reconnect delay to 1 second
+//     client->send("hello!", NULL, millis(), 10000);
+//   });
+//   server.addHandler(&events);
+esp_now_register_recv_cb(OnDataRecv);
   server.begin();
 
 }
