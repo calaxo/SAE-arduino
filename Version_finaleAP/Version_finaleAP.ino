@@ -5,7 +5,6 @@
 #include <EEPROM.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
-#include <esp_now.h>
 
 
 #define SS_PIN 5
@@ -21,26 +20,9 @@ typedef struct struct_message {
   char donnee[32];
 } struct_message;
 
-struct_message incomingMessage;
+struct_message myData;
 
 
-void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) { 
-  // Copies the sender mac address to a string
-  char macStr[18];
-  Serial.print("Packet received from: ");
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.println(macStr);
-  memcpy(&incomingMessage, incomingData, sizeof(incomingMessage));
-  
-
-Serial.println(WiFi.channel());
-  Serial.printf("le message recu est \n", incomingData);
-  Serial.printf("sa vient de :\n", incomingMessage.id, len);
-  Serial.printf("la donnée est: \n", incomingMessage.donnee);
-
-  Serial.println();
-}
 
 
 char *apiEndpoint = "http://saegeii.axel-cal.fr/api/post";  
@@ -240,18 +222,13 @@ void setup() {
   pinMode(output13, OUTPUT);
   pinMode(output12, OUTPUT);
   pinMode(inter,INPUT_PULLDOWN);
-  WiFi.mode(WIFI_AP_STA);
   xTaskCreate(vTask1, "vTask1", 5000, NULL, 2, NULL);
   xTaskCreate(vTask2, "vTask2", 10000, NULL, 1, NULL);
-
 WiFi.softAP("ESP");
 Serial.println(WiFi.localIP()+"adresse ipsur le point d'accés");
 // 
 
- if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  }
+
 
 
 
@@ -333,7 +310,7 @@ WiFi.begin(ssid, password);
 //     client->send("hello!", NULL, millis(), 10000);
 //   });
 //   server.addHandler(&events);
-esp_now_register_recv_cb(OnDataRecv);
+
   server.begin();
 
 }

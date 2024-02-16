@@ -3,6 +3,7 @@
 #include <WiFi.h>
 
 #define BOARD_ID 1
+
 uint8_t broadcastAddress[] = {0xB0, 0xA7, 0x32, 0x22, 0x69, 0x04};
 
 typedef struct struct_message {
